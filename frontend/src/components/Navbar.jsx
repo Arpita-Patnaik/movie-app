@@ -58,7 +58,6 @@ const Navbar = () => {
               <li className="nav-item">
                 <NavLink to="/favorites" className="nav-link nav-link-custom">
                   Favorites
-                  <span className="fav-badge">{favCount}</span>
                 </NavLink>
               </li>
             )}
