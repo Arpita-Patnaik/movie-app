@@ -1,0 +1,216 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #141414;
+  color: #ffffff;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* ── Movie Card ───────────────────────── */
+.movie-card {
+  background-color: #1f1f1f;
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  height: 100%;
+}
+
+.movie-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(229, 9, 20, 0.3);
+}
+
+.movie-card img {
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+}
+
+.movie-card .card-body {
+  padding: 0.75rem;
+}
+
+.movie-card .card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.movie-card .card-text {
+  font-size: 0.8rem;
+  color: #aaaaaa;
+}
+
+/* ── Navbar ───────────────────────────── */
+.navbar-dark-custom {
+  background-color: #0a0a0a;
+  border-bottom: 2px solid #e50914;
+  padding: 0.8rem 1.5rem;
+}
+
+.navbar-brand-custom {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #e50914 !important;
+  letter-spacing: 1px;
+}
+
+.nav-link-custom {
+  color: #cccccc !important;
+  font-weight: 500;
+  margin: 0 0.4rem;
+  transition: color 0.2s;
+}
+
+.nav-link-custom:hover,
+.nav-link-custom.active {
+  color: #e50914 !important;
+}
+
+/* ── Auth Forms ───────────────────────── */
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #141414;
+}
+
+.auth-box {
+  background-color: #1f1f1f;
+  padding: 2.5rem;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.auth-box h2 {
+  color: #e50914;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.auth-box .form-control {
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  color: #fff;
+}
+
+.auth-box .form-control:focus {
+  background-color: #2a2a2a;
+  border-color: #e50914;
+  color: #fff;
+  box-shadow: 0 0 0 0.2rem rgba(229, 9, 20, 0.25);
+}
+
+.btn-danger-custom {
+  background-color: #e50914;
+  border: none;
+  font-weight: 600;
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 6px;
+  color: white;
+  transition: background-color 0.2s;
+}
+
+.btn-danger-custom:hover {
+  background-color: #b2070f;
+  color: white;
+}
+
+/* ── Search ───────────────────────────── */
+.search-bar input {
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  color: #fff;
+  border-radius: 8px 0 0 8px;
+}
+
+.search-bar input:focus {
+  background-color: #2a2a2a;
+  border-color: #e50914;
+  color: #fff;
+  box-shadow: none;
+}
+
+.search-bar button {
+  background-color: #e50914;
+  border: none;
+  border-radius: 0 8px 8px 0;
+  color: white;
+  font-weight: 600;
+  padding: 0 1.2rem;
+}
+
+.search-bar button:hover {
+  background-color: #b2070f;
+}
+
+/* ── Page Title ───────────────────────── */
+.page-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #e50914;
+  padding-left: 0.75rem;
+}
+
+/* ── Badge ────────────────────────────── */
+.fav-badge {
+  background-color: #e50914;
+  font-size: 0.7rem;
+  border-radius: 50%;
+  padding: 2px 6px;
+  margin-left: 4px;
+}
+
+/* ── Empty State ──────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #666;
+}
+
+.empty-state h4 {
+  font-size: 1.2rem;
+  margin-top: 1rem;
+}
+
+/* ── Movie Detail ─────────────────────── */
+.detail-poster {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.detail-badge {
+  background-color: #2a2a2a;
+  color: #ccc;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  margin-right: 6px;
+  display: inline-block;
+  margin-bottom: 6px;
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40vh;
+}
