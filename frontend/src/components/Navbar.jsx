@@ -14,7 +14,7 @@ const Navbar = () => {
     <nav className="navbar navbar-expand-lg navbar-dark-custom">
       <div className="container-fluid">
         <Link to="/" className="navbar-brand navbar-brand-custom">
-          🎬 MovieApp
+          🎬 CineXplore
         </Link>
 
         <button
