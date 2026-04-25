@@ -1,143 +1,107 @@
 import { useState } from "react";
-import MovieCard from "../components/MovieCard";
-import { SkeletonGrid } from "../components/SkeletonCard";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import API from "../api/axios";
 
-const OMDB_KEY    = import.meta.env.VITE_OMDB_KEY;
-const MAX_RECENT  = 5;
+const Register = () => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-const Search = () => {
-  const [query, setQuery]     = useState("");
-  const [movies, setMovies]   = useState([]);
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
-  const [searched, setSearched] = useState(false);
-  const [recent, setRecent]   = useState(
-    () => JSON.parse(localStorage.getItem("recentSearches") || "[]")
-  );
 
-  const saveRecent = (term) => {
-    const updated = [term, ...recent.filter((r) => r !== term)].slice(
-      0,
-      MAX_RECENT
-    );
-    setRecent(updated);
-    localStorage.setItem("recentSearches", JSON.stringify(updated));
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSearch = async (searchTerm = query) => {
-    const term = searchTerm.trim();
-    if (!term) return;
-
-    setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError("");
-    setSearched(true);
-    setQuery(term);
+    setLoading(true);
 
     try {
-      const res  = await fetch(
-        `https://www.omdbapi.com/?s=${encodeURIComponent(term)}&apikey=${OMDB_KEY}`
-      );
-      const data = await res.json();
-
-      if (data.Response === "True") {
-        setMovies(data.Search);
-        saveRecent(term);
-      } else {
-        setMovies([]);
-        setError(data.Error || "No movies found");
-      }
-    } catch {
-      setError("Something went wrong. Please try again.");
+      const res = await API.post("/api/auth/register", form);
+      login(res.data.user, res.data.token);
+      navigate("/");
+    } catch (err) {
+      setError(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") handleSearch();
-  };
-
   return (
-    <div className="container py-4 page-enter">
-      <h2 className="page-title">🔍 Search Movies</h2>
+    <div className="auth-container">
+      <div className="auth-box">
+        <h2>🎬 Create Account</h2>
 
-      {/* Search Box */}
-      <div className="search-wrapper">
-        <div className="search-bar">
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search for any movie..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            autoFocus
-          />
-          <button onClick={() => handleSearch()} disabled={loading}>
-            {loading ? "..." : "Search"}
-          </button>
-        </div>
-
-        {/* Recent Searches */}
-        {recent.length > 0 && !searched && (
-          <div className="text-center mt-3">
-            <span style={{ color: "#666", fontSize: "0.8rem" }}>
-              Recent:{" "}
-            </span>
-            {recent.map((r) => (
-              <span
-                key={r}
-                className="recent-chip"
-                onClick={() => handleSearch(r)}
-              >
-                {r}
-              </span>
-            ))}
-          </div>
+        {error && (
+          <div className="alert alert-danger py-2 text-center">{error}</div>
         )}
-      </div>
 
-      {/* Results count */}
-      {!loading && movies.length > 0 && (
-        <p className="text-secondary mb-3" style={{ fontSize: "0.9rem" }}>
-          Found <strong style={{ color: "#fff" }}>{movies.length}</strong>{" "}
-          results for "{query}"
+        <form onSubmit={handleSubmit}>
+          <div className="mb-3">
+            <label className="form-label">Username</label>
+            <input
+              type="text"
+              name="username"
+              className="form-control"
+              placeholder="Enter username"
+              value={form.username}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">Email</label>
+            <input
+              type="email"
+              name="email"
+              className="form-control"
+              placeholder="Enter email"
+              value={form.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="form-label">Password</label>
+            <input
+              type="password"
+              name="password"
+              className="form-control"
+              placeholder="Min 6 characters"
+              value={form.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn-danger-custom"
+            disabled={loading}
+          >
+            {loading ? "Creating account..." : "Register"}
+          </button>
+        </form>
+
+        <p className="text-center text-secondary mt-3 mb-0">
+          Already have an account?{" "}
+          <Link to="/login" style={{ color: "#e91e8c" }}>
+            Login
+          </Link>
         </p>
-      )}
-
-      {/* Skeleton */}
-      {loading && <SkeletonGrid count={8} />}
-
-      {/* Error / No results */}
-      {!loading && error && (
-        <div className="empty-state">
-          <span className="empty-icon">🎭</span>
-          <h4>{error}</h4>
-          <p>Try a different keyword</p>
-        </div>
-      )}
-
-      {/* Results */}
-      {!loading && movies.length > 0 && (
-        <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
-          {movies.map((movie) => (
-            <div className="col" key={movie.imdbID}>
-              <MovieCard movie={movie} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Initial state */}
-      {!loading && !searched && (
-        <div className="empty-state">
-          <span className="empty-icon">🎬</span>
-          <h4>Find your next favourite movie</h4>
-          <p>Type a title above and hit Search</p>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
 
-export default Search;
+export default Register;
