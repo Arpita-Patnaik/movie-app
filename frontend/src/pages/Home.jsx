@@ -1,73 +1,76 @@
 import { useState, useEffect } from "react";
 import MovieCard from "../components/MovieCard";
+import { SkeletonGrid } from "../components/SkeletonCard";
+import { useNavigate } from "react-router-dom";
 
-const OMDB_KEY = import.meta.env.VITE_OMDB_KEY;
-
-// Default popular movies to show on home page
+const OMDB_KEY        = import.meta.env.VITE_OMDB_KEY;
 const DEFAULT_SEARCHES = ["Batman", "Avengers", "Spider-Man", "Inception"];
 
 const Home = () => {
-  const [movies, setMovies] = useState([]);
+  const [movies, setMovies]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError]     = useState("");
+  const navigate              = useNavigate();
 
   useEffect(() => {
-    const fetchDefaultMovies = async () => {
+    const fetchMovies = async () => {
       try {
-        // Fetch multiple search terms and combine results
         const promises = DEFAULT_SEARCHES.map((term) =>
-          fetch(
-            `https://www.omdbapi.com/?s=${term}&apikey=${OMDB_KEY}`
-          ).then((r) => r.json())
+          fetch(`https://www.omdbapi.com/?s=${term}&apikey=${OMDB_KEY}`)
+            .then((r) => r.json())
         );
-
         const results = await Promise.all(promises);
-
-        // Flatten, filter valid results, remove duplicates
-        const allMovies = results
+        const all = results
           .filter((r) => r.Response === "True")
           .flatMap((r) => r.Search)
           .filter(
-            (movie, index, self) =>
-              index === self.findIndex((m) => m.imdbID === movie.imdbID)
+            (m, i, self) => i === self.findIndex((x) => x.imdbID === m.imdbID)
           );
-
-        setMovies(allMovies);
-      } catch (err) {
-        setError("Failed to load movies");
+        setMovies(all);
+      } catch {
+        setError("Failed to load movies. Check your OMDB key.");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchDefaultMovies();
+    fetchMovies();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="spinner-container">
-        <div className="spinner-border text-danger" role="status" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mt-5">
-        <div className="alert alert-danger">{error}</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="container py-4">
-      <h2 className="page-title">🎬 All Movies</h2>
-      <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
-        {movies.map((movie) => (
-          <div className="col" key={movie.imdbID}>
-            <MovieCard movie={movie} />
+    <div className="page-enter">
+      {/* Hero */}
+      <div className="hero">
+        <h1>
+          Discover <span>Amazing</span> Movies
+        </h1>
+        {/* <p>Search thousands of movies and build your personal watchlist</p> */}
+        {/* <button
+          className="btn btn-danger mt-3 px-4 py-2 fw-bold"
+          onClick={() => navigate("/search")}
+        >
+          🔍 Start Searching
+        </button> */}
+      </div>
+
+      {/* Movie Grid */}
+      <div className="container py-4">
+        <h2 className="page-title">🎬 Popular Movies</h2>
+
+        {error && (
+          <div className="alert alert-danger">{error}</div>
+        )}
+
+        {loading ? (
+          <SkeletonGrid count={10} />
+        ) : (
+          <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
+            {movies.map((movie) => (
+              <div className="col" key={movie.imdbID}>
+                <MovieCard movie={movie} />
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

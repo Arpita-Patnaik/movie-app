@@ -1,35 +1,35 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import API from "../api/axios";
 
 const PLACEHOLDER = "https://via.placeholder.com/300x450?text=No+Image";
 
 const Favorites = () => {
   const [favorites, setFavorites] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  const fetchFavorites = async () => {
-    try {
-      const res = await API.get("/api/favorites");
-      setFavorites(res.data.favorites);
-    } catch (err) {
-      console.error("Failed to fetch favorites");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [loading, setLoading]     = useState(true);
+  const [deleting, setDeleting]   = useState(null); // track which item is deleting
+  const { refreshFavCount }       = useAuth();
+  const navigate                  = useNavigate();
 
   useEffect(() => {
-    fetchFavorites();
+    API.get("/api/favorites")
+      .then((res) => setFavorites(res.data.favorites))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const handleDelete = async (id) => {
+    setDeleting(id);
     try {
       await API.delete(`/api/favorites/${id}`);
+      // Optimistic UI: remove from list immediately
       setFavorites((prev) => prev.filter((f) => f._id !== id));
-    } catch (err) {
-      alert("Failed to remove favorite");
+      refreshFavCount();
+    } catch {
+      alert("Failed to remove. Please try again.");
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -48,7 +48,9 @@ const Favorites = () => {
         <div className="empty-state">
           <div style={{ fontSize: "3rem" }}>🎞️</div>
           <h4>No favorites yet</h4>
-          <p>Search for movies and add them to your favorites</p>
+          <p style={{ color: "#666" }}>
+            Browse movies and click ❤️ to save them here
+          </p>
           <button
             className="btn btn-danger mt-3"
             onClick={() => navigate("/search")}
@@ -65,7 +67,7 @@ const Favorites = () => {
       <h2 className="page-title">
         ❤️ My Favorites{" "}
         <span style={{ color: "#aaa", fontSize: "1rem", fontWeight: 400 }}>
-          ({favorites.length} movies)
+          ({favorites.length})
         </span>
       </h2>
 
@@ -74,7 +76,11 @@ const Favorites = () => {
           <div className="col" key={movie._id}>
             <div className="movie-card">
               <img
-                src={movie.poster !== "N/A" ? movie.poster : PLACEHOLDER}
+                src={
+                  movie.poster && movie.poster !== "N/A"
+                    ? movie.poster
+                    : PLACEHOLDER
+                }
                 alt={movie.title}
                 onClick={() => navigate(`/movie/${movie.imdbID}`)}
                 onError={(e) => (e.target.src = PLACEHOLDER)}
@@ -85,8 +91,9 @@ const Favorites = () => {
                 <button
                   className="btn btn-outline-danger btn-sm w-100"
                   onClick={() => handleDelete(movie._id)}
+                  disabled={deleting === movie._id}
                 >
-                  ✕ Remove
+                  {deleting === movie._id ? "Removing..." : "✕ Remove"}
                 </button>
               </div>
             </div>

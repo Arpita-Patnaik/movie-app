@@ -1,22 +1,46 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import API from "../api/axios";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [user, setUser]       = useState(null);
+  const [token, setToken]     = useState(null);
   const [loading, setLoading] = useState(true);
+  const [favCount, setFavCount] = useState(0);
 
-  // Load user from localStorage on app start
+  // Load from localStorage on app start
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
-    const savedUser = localStorage.getItem("user");
+    const savedUser  = localStorage.getItem("user");
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
     }
     setLoading(false);
   }, []);
+
+  // Fetch favorite count whenever user changes
+  const refreshFavCount = useCallback(async () => {
+    if (!localStorage.getItem("token")) {
+      setFavCount(0);
+      return;
+    }
+    try {
+      const res = await API.get("/api/favorites");
+      setFavCount(res.data.count);
+    } catch {
+      setFavCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      refreshFavCount();
+    } else {
+      setFavCount(0);
+    }
+  }, [user, refreshFavCount]);
 
   const login = (userData, tokenData) => {
     setUser(userData);
@@ -28,16 +52,18 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
+    setFavCount(0);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{ user, token, login, logout, loading, favCount, refreshFavCount }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook for easy access
 export const useAuth = () => useContext(AuthContext);

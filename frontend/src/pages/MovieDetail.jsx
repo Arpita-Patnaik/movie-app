@@ -1,78 +1,84 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import API from "../api/axios";
+import Toast, { useToast } from "../components/Toast";
 
-const OMDB_KEY = import.meta.env.VITE_OMDB_KEY;
+const OMDB_KEY    = import.meta.env.VITE_OMDB_KEY;
+const PLACEHOLDER = "https://via.placeholder.com/300x450?text=No+Image";
+const safe = (val, fallback = "Unknown") =>
+  !val || val === "N/A" ? fallback : val;
 
 const MovieDetail = () => {
-  const { id } = useParams(); // imdbID from URL
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { id }                      = useParams();
+  const { user, refreshFavCount }   = useAuth();
+  const navigate                    = useNavigate();
+  const { toasts, showToast }       = useToast();
+  const hasFetched                  = useRef(false);
 
-  const [movie, setMovie] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [favId, setFavId] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
+  const [movie, setMovie]                   = useState(null);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState("");
+  const [isFavorite, setIsFavorite]         = useState(false);
+  const [favId, setFavId]                   = useState(null);
+  const [actionLoading, setActionLoading]   = useState(false);
 
-  // Fetch movie details from OMDB
   useEffect(() => {
-    const fetchMovie = async () => {
-      try {
-        const res = await fetch(
-          `https://www.omdbapi.com/?i=${id}&plot=full&apikey=${OMDB_KEY}`
-        );
-        const data = await res.json();
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+    fetch(`https://www.omdbapi.com/?i=${id}&plot=full&apikey=${OMDB_KEY}`)
+      .then((r) => r.json())
+      .then((data) => {
         if (data.Response === "True") setMovie(data);
-      } catch (err) {
-        console.error("Failed to load movie");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMovie();
+        else setError("Movie not found.");
+      })
+      .catch(() => setError("Failed to load movie."))
+      .finally(() => setLoading(false));
   }, [id]);
 
-  // Check if already in favorites
   useEffect(() => {
     if (!user) return;
-    API.get("/api/favorites").then((res) => {
-      const found = res.data.favorites.find((f) => f.imdbID === id);
-      if (found) {
-        setIsFavorite(true);
-        setFavId(found._id);
-      }
-    });
+    API.get("/api/favorites")
+      .then((res) => {
+        const found = res.data.favorites.find((f) => f.imdbID === id);
+        if (found) { setIsFavorite(true); setFavId(found._id); }
+      })
+      .catch(() => {});
   }, [user, id]);
 
   const handleAddFavorite = async () => {
     if (!user) return navigate("/login");
+    if (actionLoading) return;
     setActionLoading(true);
     try {
       const res = await API.post("/api/favorites", {
-        imdbID: movie.imdbID,
-        title: movie.Title,
-        year: movie.Year,
-        poster: movie.Poster,
+        imdbID : movie.imdbID,
+        title  : movie.Title,
+        year   : movie.Year,
+        poster : movie.Poster,
       });
       setIsFavorite(true);
       setFavId(res.data.favorite._id);
+      refreshFavCount();
+      showToast("Added to favorites!", "success");
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to add favorite");
+      showToast(err.response?.data?.message || "Failed to add", "error");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleRemoveFavorite = async () => {
+    if (actionLoading) return;
     setActionLoading(true);
     try {
       await API.delete(`/api/favorites/${favId}`);
       setIsFavorite(false);
       setFavId(null);
-    } catch (err) {
-      alert("Failed to remove favorite");
+      refreshFavCount();
+      showToast("Removed from favorites", "info");
+    } catch {
+      showToast("Failed to remove", "error");
     } finally {
       setActionLoading(false);
     }
@@ -86,16 +92,21 @@ const MovieDetail = () => {
     );
   }
 
-  if (!movie) {
+  if (error || !movie) {
     return (
       <div className="container mt-5">
-        <div className="alert alert-danger">Movie not found.</div>
+        <div className="alert alert-danger">{error || "Movie not found."}</div>
+        <button className="btn btn-outline-secondary mt-2" onClick={() => navigate(-1)}>
+          ← Go Back
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="container py-5">
+    <div className="container py-5 page-enter">
+      <Toast toasts={toasts} />
+
       <button
         className="btn btn-outline-secondary btn-sm mb-4"
         onClick={() => navigate(-1)}
@@ -103,76 +114,90 @@ const MovieDetail = () => {
         ← Back
       </button>
 
-      <div className="row g-4">
+      <div className="row g-5 detail-container">
         {/* Poster */}
-        <div className="col-md-3 text-center">
+        <div className="col-md-4 text-center">
           <img
-            src={
-              movie.Poster !== "N/A"
-                ? movie.Poster
-                : "https://via.placeholder.com/300x450?text=No+Image"
-            }
+            src={safe(movie.Poster) !== "Unknown" ? movie.Poster : PLACEHOLDER}
             alt={movie.Title}
             className="detail-poster"
+            onError={(e) => (e.target.src = PLACEHOLDER)}
           />
-        </div>
 
-        {/* Info */}
-        <div className="col-md-9">
-          <h1 style={{ fontWeight: 800 }}>{movie.Title}</h1>
-
-          <div className="mt-2 mb-3">
-            <span className="detail-badge">📅 {movie.Year}</span>
-            <span className="detail-badge">⭐ {movie.imdbRating}</span>
-            <span className="detail-badge">⏱ {movie.Runtime}</span>
-            <span className="detail-badge">🔞 {movie.Rated}</span>
-          </div>
-
-          {/* Genre tags */}
-          <div className="mb-3">
-            {movie.Genre?.split(",").map((g) => (
-              <span
-                key={g}
-                className="badge me-1"
-                style={{ backgroundColor: "#e50914" }}
-              >
-                {g.trim()}
-              </span>
-            ))}
-          </div>
-
-          <p style={{ color: "#ccc", lineHeight: 1.7 }}>{movie.Plot}</p>
-
-          <p className="mt-2" style={{ color: "#aaa" }}>
-            <strong style={{ color: "#fff" }}>Director:</strong>{" "}
-            {movie.Director}
-          </p>
-          <p style={{ color: "#aaa" }}>
-            <strong style={{ color: "#fff" }}>Cast:</strong> {movie.Actors}
-          </p>
-          <p style={{ color: "#aaa" }}>
-            <strong style={{ color: "#fff" }}>Language:</strong>{" "}
-            {movie.Language}
-          </p>
+          {/* IMDB Rating */}
+          {movie.imdbRating && movie.imdbRating !== "N/A" && (
+            <div className="mt-3 d-flex justify-content-center">
+              <div className="imdb-rating">
+                ⭐ {movie.imdbRating}
+                <span style={{ fontWeight: 400, fontSize: "0.8rem" }}>
+                  /10 IMDb
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Favorite Button */}
-          <div className="mt-4">
+          <div className="mt-3">
             {isFavorite ? (
               <button
-                className="btn btn-outline-danger"
+                className="btn btn-outline-danger w-100"
                 onClick={handleRemoveFavorite}
                 disabled={actionLoading}
               >
-                ✕ Remove from Favorites
+                {actionLoading ? "Removing..." : "✕ Remove from Favorites"}
               </button>
             ) : (
               <button
-                className="btn btn-danger"
+                className="btn btn-danger w-100"
                 onClick={handleAddFavorite}
                 disabled={actionLoading}
               >
-                ❤️ Add to Favorites
+                {actionLoading ? "Adding..." : "❤️ Add to Favorites"}
               </button>
+            )}
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="col-md-8">
+          <h1 style={{ fontWeight: 900, fontSize: "2rem" }}>{movie.Title}</h1>
+
+          {/* Meta badges */}
+          <div className="mt-2 mb-3">
+            <span className="detail-badge">📅 {safe(movie.Year)}</span>
+            <span className="detail-badge">⏱ {safe(movie.Runtime)}</span>
+            <span className="detail-badge">🔞 {safe(movie.Rated)}</span>
+            <span className="detail-badge">🌍 {safe(movie.Language)}</span>
+          </div>
+
+          {/* Genre chips */}
+          {movie.Genre && movie.Genre !== "N/A" && (
+            <div className="mb-3">
+              {movie.Genre.split(",").map((g) => (
+                <span key={g} className="genre-tag">{g.trim()}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Plot */}
+          <p style={{ color: "#343a40", lineHeight: 1.85, fontSize: "0.97rem" }}>
+            {safe(movie.Plot, "No plot summary available.")}
+          </p>
+
+          {/* Meta details */}
+          <div className="detail-meta mt-3">
+            {[
+              ["🎬 Director", movie.Director],
+              ["🎭 Cast",     movie.Actors],
+              ["🏆 Awards",   movie.Awards],
+              ["🌐 Country",  movie.Country],
+              ["📦 Box Office", movie.BoxOffice],
+            ].map(([label, value]) =>
+              value && value !== "N/A" ? (
+                <p key={label}>
+                  <strong>{label}:</strong> {value}
+                </p>
+              ) : null
             )}
           </div>
         </div>
